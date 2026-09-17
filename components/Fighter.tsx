@@ -71,18 +71,54 @@ export default function Fighter({ side, lastAttack, isKnockedOut, isWinner }: Fi
 }
 
 function FighterShape({ isA, bright }: { isA: boolean; bright?: boolean }) {
+  const color = isA ? "bg-fighterA" : "bg-fighterB";
+  const glow = isA ? "shadow-glowA" : "shadow-glowB";
+  
   return (
-    <div className={`relative w-full h-full ${isA ? "shadow-glowA" : "shadow-glowB"}`}>
-      <div
-        className={`absolute inset-0 rounded-[38%] ${isA ? "bg-fighterA" : "bg-fighterB"} ${
-          bright ? "opacity-100" : "opacity-90"
-        }`}
-        style={{
-          clipPath:
-            "polygon(50% 0%, 80% 15%, 100% 50%, 80% 85%, 50% 100%, 20% 85%, 0% 50%, 20% 15%)",
-        }}
-      />
-      <div className="absolute inset-[22%] rounded-full bg-void/40 backdrop-blur-[1px]" />
+    <div className={`relative w-full h-full flex flex-col items-center justify-start pt-2 ${bright ? "opacity-100" : "opacity-90"}`}>
+      {/* Head */}
+      <div className={`w-8 h-8 rounded-full ${color} ${glow} z-10`} />
+      
+      {/* Torso & Arms */}
+      <div className="relative flex justify-center w-full -mt-1 z-0">
+        {/* Left Arm */}
+        <div className={`absolute top-1 right-[50%] w-12 h-2.5 origin-right -rotate-[35deg] rounded-full ${color} ${glow}`}>
+          {!isA && <Sword isA={false} />}
+        </div>
+        
+        {/* Torso */}
+        <div className={`w-2.5 h-16 rounded-full ${color} ${glow}`} />
+        
+        {/* Right Arm */}
+        <div className={`absolute top-1 left-[50%] w-12 h-2.5 origin-left rotate-[35deg] rounded-full ${color} ${glow}`}>
+          {isA && <Sword isA={true} />}
+        </div>
+      </div>
+      
+      {/* Legs */}
+      <div className="relative flex justify-center w-full -mt-2 z-0">
+        {/* Left Leg */}
+        <div className={`absolute top-0 right-[49%] w-2.5 h-14 origin-top -rotate-[25deg] rounded-full ${color} ${glow}`} />
+        {/* Right Leg */}
+        <div className={`absolute top-0 left-[49%] w-2.5 h-14 origin-top rotate-[25deg] rounded-full ${color} ${glow}`} />
+      </div>
     </div>
   );
 }
+
+function Sword({ isA }: { isA: boolean }) {
+  return (
+    <div 
+      className={`absolute top-1/2 -mt-[2px] ${
+        isA ? 'left-[85%] origin-left -rotate-[65deg]' : 'right-[85%] origin-right rotate-[65deg]'
+      } w-16 h-1.5 bg-slate-100 shadow-[0_0_10px_rgba(255,255,255,0.8)] rounded-sm z-20`}
+    >
+      {/* Crossguard */}
+      <div className={`absolute top-1/2 -mt-2 ${isA ? 'left-2' : 'right-2'} w-1.5 h-4 bg-zinc-400 rounded-sm`} />
+      {/* Handle */}
+      <div className={`absolute top-1/2 -mt-[3px] ${isA ? 'right-[calc(100%-10px)]' : 'left-[calc(100%-10px)]'} w-4 h-1.5 bg-zinc-600 rounded-sm`} />
+    </div>
+  );
+}
+
+

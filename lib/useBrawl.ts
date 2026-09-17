@@ -78,11 +78,43 @@ export function useBrawl() {
     setState((s) => ({ ...s, phase: "fighting" }));
   }, []);
 
+  const isFinishedRef = useRef(false);
+
+  const finish = useCallback(async () => {
+    if (isFinishedRef.current) return;
+    isFinishedRef.current = true;
+    setState((s) => ({ ...s, phase: "finishing" }));
+    await wait(400);
+
+    // Determine winner and drain the loser's health to 0 first
+    let finalWinner: "A" | "B" = "A";
+    setState((s) => {
+      finalWinner = s.healthA === s.healthB ? (Math.random() < 0.5 ? "A" : "B") : s.healthA > s.healthB ? "A" : "B";
+      return { 
+        ...s, 
+        healthA: finalWinner === "B" ? 0 : s.healthA,
+        healthB: finalWinner === "A" ? 0 : s.healthB,
+        winner: finalWinner 
+      };
+    });
+
+    // Wait for the health bar animation to visually reach 0
+    await wait(400);
+
+    // Now trigger the knockout animation so it matches the empty bar
+    setState((s) => ({ ...s, phase: "knockout" }));
+  }, []);
+
   const processQueue = useCallback(() => {
-    if (processingRef.current) return;
+    if (processingRef.current || isFinishedRef.current) return;
     processingRef.current = true;
 
     const step = () => {
+      if (isFinishedRef.current) {
+        processingRef.current = false;
+        return;
+      }
+      
       const next = queueRef.current.shift();
 
       if (next === undefined) {
@@ -95,21 +127,23 @@ export function useBrawl() {
       const isCombo = backlog >= COMBO_BACKLOG_THRESHOLD;
       const isHeavy = next.trim().length >= 15;
       const strength = isCombo ? "combo" : isHeavy ? "heavy" : "light";
-      const damage = isCombo ? 9 : isHeavy ? 14 : 7;
+      const baseDamage = isCombo ? 9 : isHeavy ? 14 : 7;
 
       const attacker = attackerTurnRef.current;
       attackerTurnRef.current = attacker === "A" ? "B" : "A";
       const id = ++attackIdRef.current;
 
       setState((s) => {
-        const healthA = attacker === "B" ? Math.max(0, s.healthA - damage) : s.healthA;
-        const healthB = attacker === "A" ? Math.max(0, s.healthB - damage) : s.healthB;
+        // Drain health logarithmically so it never actually hits 0 during the stream
+        const damageA = attacker === "B" ? Math.min(baseDamage, s.healthA * 0.15) : 0;
+        const damageB = attacker === "A" ? Math.min(baseDamage, s.healthB * 0.15) : 0;
+        
         return {
           ...s,
-          healthA,
-          healthB,
+          healthA: Math.max(1, s.healthA - damageA),
+          healthB: Math.max(1, s.healthB - damageB),
           responseText: s.responseText + next,
-          lastAttack: { id, attacker, strength, damage },
+          lastAttack: { id, attacker, strength, damage: baseDamage },
         };
       });
 
@@ -117,17 +151,7 @@ export function useBrawl() {
     };
 
     step();
-  }, []);
-
-  const finish = useCallback(async () => {
-    setState((s) => ({ ...s, phase: "finishing" }));
-    await wait(650);
-    setState((s) => {
-      const winner: "A" | "B" =
-        s.healthA === s.healthB ? (Math.random() < 0.5 ? "A" : "B") : s.healthA > s.healthB ? "A" : "B";
-      return { ...s, phase: "knockout", winner };
-    });
-  }, []);
+  }, [finish]);
 
   const enqueueDelta = useCallback(
     (text: string) => {
@@ -234,6 +258,7 @@ export function useBrawl() {
       processingRef.current = false;
       streamDoneRef.current = false;
       attackerTurnRef.current = "A";
+      isFinishedRef.current = false;
 
       setState({ ...INITIAL_STATE, phase: "locked" });
       await wait(PHASE_STEP_MS);
