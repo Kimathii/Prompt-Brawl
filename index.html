@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROMPT BRAWL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14121f;
+    --panel: #1e1b2e;
+    --panel-line: #322c4a;
+    --accent: #ffd23f;
+    --accent2: #ff4d6d;
+    --text: #f5f3ff;
+    --muted: #8b87a8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 64px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 3px 3px 0 var(--accent2);
+    margin: 0 0 6px;
+    text-align: center;
+  }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 20px;
+    text-align: center;
+    max-width: 440px;
+  }
+
+  .arena {
+    width: 100%;
+    max-width: 640px;
+    background: var(--panel);
+    border: 2px solid var(--panel-line);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arena.shake { animation: shake 0.18s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .hud {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .fighter-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+  }
+
+  .fighter-label.right { text-align: right; }
+
+  .health-track {
+    height: 10px;
+    background: #0d0b16;
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  .health-fill {
+    height: 100%;
+    width: 100%;
+    transition: width 0.3s ease;
+  }
+
+  #healthYou .health-fill { background: var(--accent); }
+  #healthWait .health-fill { background: var(--accent2); }
+
+  .vs {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .stage {
+    height: 180px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 12px;
+    position: relative;
+  }
+
+  .stage::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 2px;
+    background: var(--panel-line);
+  }
+
+  .fighter {
+    width: 70px;
+    height: 130px;
+    position: relative;
+    transition: transform 0.15s ease;
+  }
+
+  .fighter .head {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    position: absolute;
+    top: 0; left: 22px;
+  }
+
+  .fighter .body {
+    width: 34px; height: 56px;
+    border-radius: 8px;
+    position: absolute;
+    top: 24px; left: 18px;
+  }
+
+  .fighter .arm {
+    width: 30px; height: 10px;
+    border-radius: 5px;
+    position: absolute;
+    top: 36px;
+    left: 32px;
+    transform-origin: left center;
+    transition: transform 0.12s ease;
+  }
+
+  .fighter .leg {
+    width: 12px; height: 30px;
+    border-radius: 4px;
+    position: absolute;
+    top: 78px;
+  }
+
+  #you .head, #you .body, #you .arm, #you .leg { background: var(--accent); }
+  #wait .head, #wait .body, #wait .arm, #wait .leg { background: var(--accent2); }
+
+  #wait { transform: scaleX(-1); }
+
+  .leg.l { left: 12px; }
+  .leg.r { left: 28px; }
+
+  .fighter.punch .arm { transform: rotate(-55deg) translateX(6px); }
+  .fighter.hit { filter: brightness(1.5); }
+  #you.hit { transform: translateX(6px); }
+  #wait.hit { transform: scaleX(-1) translateX(6px); }
+
+  .fighter.victory { animation: bounce 0.5s ease infinite; }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  #wait.victory { animation: bounce 0.5s ease infinite; }
+  #wait.ko { opacity: 0.25; transform: scaleX(-1) rotate(80deg) translateY(20px); }
+
+  .status {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    text-align: center;
+    color: var(--muted);
+    min-height: 16px;
+    margin-top: 4px;
+  }
+
+  .status.error { color: var(--accent2); }
+
+  details.settings {
+    width: 100%;
+    max-width: 640px;
+    margin-top: 16px;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+
+  details.settings summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  details.settings summary:hover { color: var(--text); }
+
+  .settings-body {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .settings-body label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .settings-body input,
+  .settings-body select {
+    background: #0d0b16;
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .settings-body .note {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 2px 0 0;
+  }
+
+  form {
+    width: 100%;
+    max-width: 640px;
+    margin-top: 16px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 70px;
+    resize: vertical;
+    background: var(--panel);
+    border: 2px solid var(--panel-line);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button {
+    display: block;
+    margin: 14px auto 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    background: var(--accent);
+    color: #14121f;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 22px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+
+  button:hover:not(:disabled) { transform: translateY(-2px); }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+  .result {
+    width: 100%;
+    max-width: 640px;
+    margin-top: 18px;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    display: none;
+    white-space: pre-wrap;
+  }
+
+  .result.show { display: block; }
+
+  .result .label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+  <h1>PROMPT BRAWL</h1>
+  <p class="tagline">Your prompt fights THE WAIT while the AI works. No mashing buttons — just watch it land.</p>
+
+  <div class="arena" id="arena">
+    <div class="hud">
+      <div>
+        <div class="fighter-label">YOUR PROMPT</div>
+        <div class="health-track" id="healthYou"><div class="health-fill"></div></div>
+      </div>
+      <div class="vs">VS</div>
+      <div>
+        <div class="fighter-label right">THE WAIT</div>
+        <div class="health-track" id="healthWait"><div class="health-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="fighter" id="you">
+        <div class="head"></div>
+        <div class="body"></div>
+        <div class="arm"></div>
+        <div class="leg l"></div>
+        <div class="leg r"></div>
+      </div>
+      <div class="fighter" id="wait">
+        <div class="head"></div>
+        <div class="body"></div>
+        <div class="arm"></div>
+        <div class="leg l"></div>
+        <div class="leg r"></div>
+      </div>
+    </div>
+
+    <div class="status" id="status">READY WHEN YOU ARE</div>
+  </div>
+
+  <details class="settings">
+    <summary>▸ Add an API key for a real fight (optional — works without one)</summary>
+    <div class="settings-body">
+      <label for="apiKey">Anthropic API key</label>
+      <input type="password" id="apiKey" placeholder="sk-ant-...">
+      <label for="model">Model</label>
+      <select id="model">
+        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (fastest)</option>
+        <option value="claude-sonnet-5">Claude Sonnet 5</option>
+        <option value="claude-opus-5">Claude Opus 5</option>
+      </select>
+      <p class="note">Your key stays in this browser tab only, in memory — it's never saved, never sent anywhere but Anthropic's API, and is cleared on refresh. This calls the API directly from the browser, which exposes the key in devtools network requests, so only use a personal key for local testing and never commit one into your repo or ship this to real users as-is. Leave this blank to use the simulated fight instead.</p>
+    </div>
+  </details>
+
+  <form id="promptForm">
+    <textarea id="promptInput" placeholder="Type anything you'd send an AI..." required></textarea>
+    <button type="submit" id="sendBtn">THROW PROMPT</button>
+  </form>
+
+  <div class="result" id="result">
+    <span class="label">RESPONSE READY</span>
+    <span id="resultText"></span>
+  </div>
+
+<script>
+  const form = document.getElementById('promptForm');
+  const input = document.getElementById('promptInput');
+  const apiKeyInput = document.getElementById('apiKey');
+  const modelSelect = document.getElementById('model');
+  const sendBtn = document.getElementById('sendBtn');
+  const arena = document.getElementById('arena');
+  const you = document.getElementById('you');
+  const wait = document.getElementById('wait');
+  const healthYouFill = document.querySelector('#healthYou .health-fill');
+  const healthWaitFill = document.querySelector('#healthWait .health-fill');
+  const status = document.getElementById('status');
+  const result = document.getElementById('result');
+  const resultText = document.getElementById('resultText');
+
+  let landed = 0;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const prompt = input.value.trim();
+    if (!prompt || sendBtn.disabled) return;
+
+    resetArena();
+    sendBtn.disabled = true;
+
+    const apiKey = apiKeyInput.value.trim();
+    if (apiKey) {
+      runLiveFight(prompt, apiKey, modelSelect.value);
+    } else {
+      runSimulatedFight(prompt);
+    }
+  });
+
+  function resetArena() {
+    landed = 0;
+    result.classList.remove('show');
+    you.className = 'fighter';
+    wait.className = 'fighter';
+    status.classList.remove('error');
+    healthYouFill.style.width = '100%';
+    healthWaitFill.style.width = '100%';
+    status.textContent = 'FIGHT!';
+  }
+
+  // Shared visual hit — punch animation + shake. Does not touch health bars.
+  function playHit() {
+    landed++;
+    const attacker = landed % 2 === 0 ? you : wait;
+    const defender = landed % 2 === 0 ? wait : you;
+    attacker.classList.add('punch');
+    defender.classList.add('hit');
+    arena.classList.add('shake');
+    setTimeout(() => {
+      attacker.classList.remove('punch');
+      defender.classList.remove('hit');
+      arena.classList.remove('shake');
+    }, 150);
+    return attacker === you; // true when your prompt lands the hit
+  }
+
+  function finishFight(responseTextValue) {
+    wait.classList.add('ko');
+    you.classList.add('victory');
+    healthWaitFill.style.width = '0%';
+    status.textContent = 'K.O. — RESPONSE READY';
+    resultText.textContent = responseTextValue;
+    result.classList.add('show');
+    sendBtn.disabled = false;
+  }
+
+  function failFight(message) {
+    status.textContent = message;
+    status.classList.add('error');
+    you.className = 'fighter';
+    wait.className = 'fighter';
+    sendBtn.disabled = false;
+  }
+
+  // --- Simulated mode: no API key needed, works immediately ---
+  function runSimulatedFight(prompt) {
+    const hits = 8 + Math.min(6, Math.floor(prompt.length / 20)); // longer prompt, longer bout
+
+    function tick() {
+      const youLanded = playHit();
+      if (youLanded) {
+        healthWaitFill.style.width = Math.max(0, 100 - (landed / hits) * 100) + '%';
+      }
+      if (landed >= hits) {
+        finishFight('You asked: "' + prompt + '". This is where your real AI response lands — add an API key above to see it for real.');
+      } else {
+        setTimeout(tick, 380 + Math.random() * 260);
+      }
+    }
+    setTimeout(tick, 300);
+  }
+
+  // --- Live mode: real streaming call to the Claude API ---
+  // "anthropic-dangerous-direct-browser-access" is Anthropic's supported
+  // bring-your-own-key pattern for client-side calls (no backend needed).
+  // It's fine for a personal demo like this; don't ship a real key in a
+  // deployed/public build.
+  async function runLiveFight(prompt, apiKey, model) {
+    let waitHealth = 100;
+    let fullText = '';
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: model,
+          max_tokens: 400,
+          stream: true,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.text();
+        throw new Error('API error ' + resp.status + ': ' + errBody.slice(0, 200));
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (!data) continue;
+
+          let evt;
+          try { evt = JSON.parse(data); } catch (e) { continue; }
+
+          if (evt.type === 'content_block_delta' && evt.delta && evt.delta.text) {
+            fullText += evt.delta.text;
+            const youLanded = playHit();
+            if (youLanded) {
+              waitHealth = Math.max(4, waitHealth * 0.75);
+              healthWaitFill.style.width = waitHealth + '%';
+            }
+          }
+
+          if (evt.type === 'message_stop') {
+            finishFight(fullText || '(empty response)');
+            return;
+          }
+        }
+      }
+
+      // Stream ended without an explicit message_stop event
+      finishFight(fullText || '(empty response)');
+
+    } catch (err) {
+      failFight('ERROR — CHECK KEY/CONSOLE');
+      console.error('Prompt Brawl live fight failed:', err);
+    }
+  }
+</script>
+</body>
+</html>
